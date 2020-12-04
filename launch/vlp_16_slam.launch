@@ -20,13 +20,13 @@
 
     <node pkg="liv_slam" type="alaserMapping" name="alaserMapping" output="screen" />
     
-    
     <node name="BackEnd_node" pkg="liv_slam" type="BackEnd_node" output="screen">
-        <param name="enable_GNSS" value="false" />
+        <param name="enable_GNSS" value="true" />
+        <param name="enable_GNSS_optimize" value="false" />
+        <param name="enable_plane_optimize" value="true" />
         <param name="Loop_ndt_resolution" value="3.0" />
         <param name="Loop_score_thresh" value="1.0" />
-        
-    </node>   
+    </node>       
 
     <node pkg="liv_slam" type="map2odom_publisher.py" name="map2odom_publisher" />
 

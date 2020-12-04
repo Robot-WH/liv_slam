@@ -59,9 +59,11 @@ public:
    * @param keyframes       keyframes
    * @param new_keyframes   newly registered keyframes
    */
-  Loop::Ptr detect(const std::vector<KeyFrame::Ptr>& keyframes, const std::vector<KeyFrame::Ptr>& new_keyframes) {
+  Loop::Ptr detect(const std::vector<KeyFrame::Ptr>& keyframes, const std::vector<KeyFrame::Ptr>& new_keyframes) 
+  {
     // too close to the last registered loop edge 与上一次闭环的关键帧应该足够的远    这个决定闭环检测的频率 
-    if(new_keyframes[0]->id - last_detect_index < distance_from_last_detect_thresh) {
+    if(new_keyframes[0]->id - last_detect_index < distance_from_last_detect_thresh) 
+    {
       return nullptr;
     }
     last_detect_index = new_keyframes[0]->id;

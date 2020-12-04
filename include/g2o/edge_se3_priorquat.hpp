@@ -5,6 +5,7 @@
 #include <g2o/types/slam3d_addons/types_slam3d_addons.h>
 
 namespace g2o {
+  // 主要用于IMU 位姿观测  	
   //单边      观测值的类型为Eigen::Quaterniond        残差的维度为3      
 class EdgeSE3PriorQuat : public g2o::BaseUnaryEdge<3, Eigen::Quaterniond, g2o::VertexSE3> {
 	public:
@@ -26,7 +27,7 @@ class EdgeSE3PriorQuat : public g2o::BaseUnaryEdge<3, Eigen::Quaterniond, g2o::V
 			_error = estimate.vec() - _measurement.vec();
 		}
 		
-               // 设定测量值    四元数   
+        // 设定测量值    四元数   
 		void setMeasurement(const Eigen::Quaterniond& m) override {
 			_measurement = m;        
 			// 什么意思？？？？？？？    保持w为正？？？？

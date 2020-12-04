@@ -4,7 +4,6 @@
 #include <pcl/common/transforms.h>
 
  
-
 InformationMatrixCalculator::InformationMatrixCalculator(ros::NodeHandle& nh) {
   use_const_inf_matrix = nh.param<double>("use_const_inf_matrix", false);
   const_stddev_x = nh.param<double>("const_stddev_x", 0.5);
@@ -19,8 +18,8 @@ InformationMatrixCalculator::InformationMatrixCalculator(ros::NodeHandle& nh) {
   max_range = 0.5;
 }
 
-InformationMatrixCalculator::~InformationMatrixCalculator() {
-
+InformationMatrixCalculator::~InformationMatrixCalculator() 
+{
 }
 
 // 计算信息矩阵   用于激光里程计的边

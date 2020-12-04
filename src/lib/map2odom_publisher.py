@@ -7,7 +7,7 @@ from geometry_msgs.msg import *
 class Map2OdomPublisher:
 	def __init__(self):
 		self.broadcaster = tf.TransformBroadcaster()
-		self.subscriber = rospy.Subscriber('/hdl_graph_slam/odom2pub', TransformStamped, self.callback)
+		self.subscriber = rospy.Subscriber('/odom2pub', TransformStamped, self.callback)
 
 	def callback(self, odom_msg):
 		self.odom_msg = odom_msg

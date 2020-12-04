@@ -5,6 +5,7 @@
 #include <g2o/types/slam3d_addons/types_slam3d_addons.h>
 
 namespace g2o {
+  // x,y的约束  
   class EdgeSE3PriorXY : public g2o::BaseUnaryEdge<2, Eigen::Vector2d, g2o::VertexSE3> {
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW

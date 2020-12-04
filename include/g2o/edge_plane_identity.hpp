@@ -11,6 +11,7 @@ namespace g2o {
  * @brief A modified version of g2o::EdgePlane. This class takes care of flipped plane normals.
  *
  */
+
 class EdgePlaneIdentity : public BaseBinaryEdge<4, Eigen::Vector4d, VertexPlane, VertexPlane> {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW

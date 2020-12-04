@@ -12,6 +12,7 @@ namespace g2o {
   class VertexPointXYZ;
   class EdgeSE3;
   class EdgeSE3Plane;
+  //class EdgeSE3PlanePrior;  
   class EdgeSE3PointXYZ;
   class EdgeSE3PriorXY;
   class EdgeSE3PriorXYZ;

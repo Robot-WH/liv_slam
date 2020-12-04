@@ -40,9 +40,9 @@ public:
   Eigen::Isometry3d Pose;
   Eigen::Isometry3d deltaPose;                    // 激光里程计 计算出来的位移  主要用于边的显示   last - > curr
   pcl::PointCloud<PointT>::ConstPtr cloud;                  // point cloud   点云
-  boost::optional<Eigen::Vector4d> floor_coeffs;       // detected floor's coefficients    地面参数
-  Eigen::Vector3d utm_coord;              // UTM coord obtained by GPS    UTM坐标   
-  Eigen::Quaterniond orientation;         // imu测得的姿态
+  boost::optional<Eigen::Vector4d> floor_coeffs;   // detected floor's coefficients    地面参数
+  Eigen::Vector3d utm_coord;                       // UTM coord obtained by GPS    UTM坐标   
+  Eigen::Quaterniond orientation;                  // imu测得的姿态
   bool GNSS_Valid = false;
   bool IMU_Valid = false;
 };

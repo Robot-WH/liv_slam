@@ -3,7 +3,7 @@ project(liv_slam)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
 set(CMAKE_BUILD_TYPE "Release" )
-set(CMAKE_CXX_FLAGS "-std=c++11")
+set(CMAKE_CXX_FLAGS "-std=c++14")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 
 ## Compile as C++11, supported in ROS Kinetic and newer
@@ -14,21 +14,22 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 ## is used, also find other catkin packages
 
 find_package(catkin REQUIRED COMPONENTS
-roscpp
-pcl_conversions
-pcl_msgs
-pcl_ros
-sensor_msgs
-message_generation
-ndt_omp
+  roscpp
+  pcl_conversions
+  pcl_msgs
+  pcl_ros
+  sensor_msgs
+  message_generation
+  ndt_omp
+  cv_bridge
 )
 
 find_package(catkin REQUIRED )
 find_package(Ceres REQUIRED)
 find_package(PCL 1.7 REQUIRED)
 find_package(G2O REQUIRED)
-#find_package(Eigen3)
-find_package(OpenCV REQUIRED)
+find_package(Eigen3  REQUIRED)
+find_package(OpenCV 3.0 QUIET)
 
 find_package(OpenMP)
 if (OPENMP_FOUND)
@@ -36,6 +37,8 @@ if (OPENMP_FOUND)
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
 
+# 如果没有这句话 那么生成的可执行文件就会到build文件下  正确的是应该到devel下
+catkin_package()
 
 include_directories(
   include
@@ -47,9 +50,11 @@ include_directories(
   ${OpenCV_INCLUDE_DIRS}
 )
 
-link_directories(${G2O_LIBRARY_DIRS})
-link_directories(${PCL_LIBRARY_DIRS})
-add_definitions(${PCL_DEFINITIONS})
+
+
+# link_directories(${G2O_LIBRARY_DIRS})
+# link_directories(${PCL_LIBRARY_DIRS})
+# add_definitions(${PCL_DEFINITIONS})
 
 # link_libraries(${G2O_LIBRARIES})
 
@@ -64,13 +69,13 @@ add_definitions(${PCL_DEFINITIONS})
 ## DEPENDS: system dependencies of this project that dependent projects also need
 
 # ?????
-catkin_package(
-  DEPENDS EIGEN3 PCL 
-  INCLUDE_DIRS include
-)
+#catkin_package(
+#  DEPENDS EIGEN3 PCL 
+#  INCLUDE_DIRS include
+#)
 
 # ????
-set(ALL_TARGET_LIBRARIES "")
+# set(ALL_TARGET_LIBRARIES "")
 # ????
 include(cmake/geographic.cmake)
 
@@ -123,6 +128,17 @@ target_link_libraries(MapOptimator_node
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
 )
+
+add_executable(Pointcloud2laserscan_node src/apps/Pointcloud2laserscan_node.cpp)
+add_dependencies(Pointcloud2laserscan_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(Pointcloud2laserscan_node ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_executable( 2d_GridMapping
+  src/apps/2D_mapping_node.cpp
+  src/lib/2d_grid_mapping.cpp
+)
+target_link_libraries(2d_GridMapping ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${EIGEN3_LIBS})
+
 
 add_executable(ascanRegistration src/apps/feature_based_FrontEnd/scanRegistration.cpp)
 add_dependencies(ascanRegistration ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})

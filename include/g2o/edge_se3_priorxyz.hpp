@@ -5,7 +5,7 @@
 #include <g2o/types/slam3d_addons/types_slam3d_addons.h>
 
 namespace g2o {
- // GPS获取到经纬高后的边   继承单边
+ // GPS获取到经纬高后的边   继承单边        3表示残差维度    Eigen::Vector3d 表示测量类型     g2o::VertexSE3 表示节点类型   
 class EdgeSE3PriorXYZ : public g2o::BaseUnaryEdge<3, Eigen::Vector3d, g2o::VertexSE3> {
 	public:
 		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -14,11 +14,12 @@ class EdgeSE3PriorXYZ : public g2o::BaseUnaryEdge<3, Eigen::Vector3d, g2o::Verte
 		{}
               // 计算残差  
 		void computeError() override {
-		  // 获取该边连接的节点
+		    // 获取该边连接的节点
 			const g2o::VertexSE3* v1 = static_cast<const g2o::VertexSE3*>(_vertices[0]);
-                       // 获取该节点状态的估计值
+            // 获取该节点状态的估计值
 			Eigen::Vector3d estimate = v1->estimate().translation();
 			_error = estimate - _measurement;    // 状态值 - 测量值 = 残差
+			
 		}
                // 即GPS的值
 		void setMeasurement(const Eigen::Vector3d& m) override {

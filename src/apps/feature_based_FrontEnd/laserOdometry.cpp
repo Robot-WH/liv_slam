@@ -196,7 +196,7 @@ void laserCloudFullResHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloud
     mBuf.lock();
     fullPointsBuf.push(laserCloudFullRes2);
     mBuf.unlock();
-}
+} 
 
 int main(int argc, char **argv)
 {
@@ -302,6 +302,7 @@ int main(int argc, char **argv)
 
                     // ceres::LossFunction *loss_function = NULL;
                     ceres::LossFunction *loss_function = new ceres::HuberLoss(0.1);      // 鲁棒核函数    
+                    // 四元数的广义加法  
                     ceres::LocalParameterization *q_parameterization = new ceres::EigenQuaternionParameterization();
                     
                     ceres::Problem::Options problem_options;

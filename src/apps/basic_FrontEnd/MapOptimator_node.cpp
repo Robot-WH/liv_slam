@@ -123,7 +123,6 @@ void Update()
     // 更新转换矩阵   To'o = To'b*Tob^-1 
     q_opt_odom = q_opt_curr * q_odom_curr.inverse();         // 求出Rwo 
 	  t_opt_odom = t_opt_curr - q_opt_odom * t_odom_curr;      // 求出Two
-
 }
 
 // 点云转移到Map坐标下
@@ -171,13 +170,13 @@ void laserOdometryHandler(const nav_msgs::Odometry::ConstPtr &laserOdometry)
 	t_odom_curr.x() = laserOdometry->pose.pose.position.x;
 	t_odom_curr.y() = laserOdometry->pose.pose.position.y;
 	t_odom_curr.z() = laserOdometry->pose.pose.position.z;
-    // 直接将laser_odometry的结果乘以优化结果   Two*Tob
+  // 直接将laser_odometry的结果乘以优化结果   Two*Tob
 	Eigen::Quaternionf q_opt_curr = q_opt_odom * q_odom_curr;
 	Eigen::Vector3f t_opt_curr = q_opt_odom * t_odom_curr + t_opt_odom; 
-    // 将校正后的结果输出   
+  // 将校正后的结果输出   
 	nav_msgs::Odometry odomAftMapped;
-	odomAftMapped.header.frame_id = odom_frame_id;
-	odomAftMapped.child_frame_id = lidar_frame_id;
+	odomAftMapped.header.frame_id = odom_frame_id;    
+	odomAftMapped.child_frame_id = lidar_frame_id;    // 重新设置优化后的坐标系  
 	odomAftMapped.header.stamp = laserOdometry->header.stamp;
 	odomAftMapped.pose.pose.orientation.x = q_opt_curr.x();
 	odomAftMapped.pose.pose.orientation.y = q_opt_curr.y();
@@ -194,7 +193,7 @@ void laserOdometryHandler(const nav_msgs::Odometry::ConstPtr &laserOdometry)
 	transform.setOrigin(tf::Vector3(t_opt_curr(0),
 									t_opt_curr(1),
 									t_opt_curr(2)));
-	q.setW(q_opt_curr.w());
+	q.setW(q_opt_curr.w());                               
 	q.setX(q_opt_curr.x());
 	q.setY(q_opt_curr.y());
 	q.setZ(q_opt_curr.z());
@@ -204,24 +203,25 @@ void laserOdometryHandler(const nav_msgs::Odometry::ConstPtr &laserOdometry)
 
 // 这里获得的激光点云  要是去除了畸变后的 !!!!
 void cloudHandler(const sensor_msgs::PointCloud2ConstPtr& cloud_msg) {
-    // 当滑动窗口填满后   每2Hz添加添加一次  这个是为了限制最高频率 
-    if(full)
+
+  // 当滑动窗口填满后   每2Hz添加添加一次  这个是为了限制最高频率 
+  if(full)
+  {
+    if(freq_Count<Optimize_freq)  
     {
-      if(freq_Count<Optimize_freq)  
-      {
-         freq_Count++;
-         return;
-      }
-      else
-      {
-        freq_Count=1;  
-      }      
+        freq_Count++;
+        return;
     }
+    else
+    {
+      freq_Count=1;  
+    }      
+  }
+
   mBuf.lock();
 	PointsBuf.push(cloud_msg);   
 	mBuf.unlock();    
 }
-
 
 void MapOptimize()
 {
@@ -234,18 +234,22 @@ void MapOptimize()
        // 如果 点云数据队首早于odometry数据队首   则点云数据队首丢弃 
        while(!PointsBuf.empty()&&odometryBuf.front()->header.stamp.toSec()>PointsBuf.front()->header.stamp.toSec())
          PointsBuf.pop();  
+
        if(PointsBuf.empty()) 
        {
           mBuf.unlock();    
           break;
        }
+
        while(!odometryBuf.empty()&&odometryBuf.front()->header.stamp.toSec()<PointsBuf.front()->header.stamp.toSec())
          odometryBuf.pop();
+
        if(odometryBuf.empty())  
        {  
          mBuf.unlock();
          break;
        }
+
        // 最后再检查一下对弃没有 
        if(odometryBuf.front()->header.stamp.toSec()!=PointsBuf.front()->header.stamp.toSec())
        {
@@ -268,14 +272,17 @@ void MapOptimize()
         t_odom_curr.y() = odometryBuf.front()->pose.pose.position.y;
         t_odom_curr.z() = odometryBuf.front()->pose.pose.position.z;
         odometryBuf.pop();
+
        // 将 PointsBuf 清空   保证下一次处理时  是最新的数据 
        while(!PointsBuf.empty())
        {
          PointsBuf.pop();    
        }
+
        mBuf.unlock();
        // 将odom转到Map系中
        transformAssociateToMap();   
+
        // 如果滑窗填满则判断运动  
        if(full)
        {
@@ -296,21 +303,27 @@ void MapOptimize()
         }    
         //ROS_INFO_STREAM("enoungh moving x:"<<dx<<" da:"<<da);
        }
-       // 如果滑动窗口存在点云  则进行匹配
+
+       /************************************************************ 地图匹配校正 ***********************************************/
+       // 如果滑动窗口存在点云  则进行匹配 
        if(Frame_count)
        {  
 //          ROS_INFO_STREAM("do scan to map match!"); 
           TicToc t_pub;
           // 构造匹配地图
           CloudLocalMap.reset(new pcl::PointCloud<PointT>());
+
           for(int i=0;i<Frame_count;i++)
+          {
             *CloudLocalMap += *FramesWin[i];
+          }
+
 //          ROS_INFO_STREAM("Local map size: "<<CloudLocalMap->points.size()<<" Frame_count: "<<Frame_count);
           registration->setInputTarget(CloudLocalMap);   
-      
           registration->setInputSource(lidarCloud);    
           pcl::PointCloud<PointT>::Ptr aligned(new pcl::PointCloud<PointT>());  
           registration->align(*aligned, Pose_opt_curr);         // 将之前直接转到Map系的位姿Pose_opt_curr作为预测  
+
           // 如果迭代没收敛   则该帧忽略  
           if(!registration->hasConverged()) {
             ROS_INFO("Map matching has not converged!!!!!");
@@ -326,12 +339,14 @@ void MapOptimize()
 //               break;
             }  
           }
+
           Pose_opt_curr = registration->getFinalTransformation();       // 优化结果  
           Update();                 // 将Pose_opt_curr转换成四元数    同时  更新转换矩阵   
           printf("map match time %f ms \n", t_pub.toc());
        }  
+
 //       ROS_INFO_STREAM("do update map"); 
-       // 更新全局地图     只有经过优化 才能添加到全局地图中 
+       /*************************************** 更新全局地图     只有经过优化 才能添加到全局地图中 **********************************************/
        // 将当前帧转到优化后odom中
        PointT point;
        int laserCloudNum = lidarCloud->points.size();
@@ -341,25 +356,33 @@ void MapOptimize()
           pointAssociateToMap(&lidarCloud->points[i], &point);
           FramesWin[Frame_count]->push_back(point);
        }
+
        // 如果滑窗满了   则窗口滑动
        if(full)
        {
 //       ROS_INFO_STREAM("do full window slide");       
          for(int i=0; i<windows_size-1; i++)
+         {
            FramesWin[i] = FramesWin[i+1];  
+         }
+
          FramesWin[Frame_count].reset(new pcl::PointCloud<PointT>());
        }
        else
        {
 //         ROS_INFO_STREAM("do add window");       
-         if(Frame_count>=windows_size-2)            
+         if(Frame_count>=windows_size-2)   
+         {         
             full = true;        // 填满    
+         }
+
          Frame_count++;          
        }
-       //保存窗口最后一帧
+
+       //保存窗口最后一帧的位姿 
         T_win_last = Pose_opt_curr;
 //        ROS_INFO_STREAM("do send msg");       
-        /****************************** 发布信息 **********************************/
+        /************************************************************* 发布信息 ***************************************************************/
 //        static tf::TransformBroadcaster keyframe_broadcaster;
 //        auto keyframe_trans = matrix2transform(ros::Time().fromSec(timeLaserOdometry), T_win_last, odom_frame_id, "keyframe");
 //        keyframe_broadcaster.sendTransform(keyframe_trans);
@@ -398,7 +421,7 @@ void MapOptimize()
         pubLaserAfterMappedPath.publish(laserAfterMappedPath);
        
     }
-        // 2ms的延时  
+    // 2ms的延时  
     std::chrono::milliseconds dura(2);
     std::this_thread::sleep_for(dura);
   }
@@ -407,6 +430,7 @@ void MapOptimize()
 void initialize_params(ros::NodeHandle nh) {
     
   // 设置原点坐标系名字
+  // TODO: 从yaml 文件中读取该参数  
   odom_frame_id = nh.param<std::string>("odom_frame_id", "/odom");
   lidar_frame_id = nh.param<std::string>("lidar_frame_id", "/lidar_opt_odom");
   // 关键帧选取 

@@ -9,12 +9,16 @@
 class GNSSData {
   public:
     ros::Time time;
+    // WGS84系 
     double longitude = 0.0;
     double latitude = 0.0;
     double altitude = 0.0;
+    // UTM系 
     double local_E = 0.0;
     double local_N = 0.0;
     double local_U = 0.0;
+    // MAP系 下Lidar的坐标 
+    Eigen::Vector3d Lidar_Map_coords = {0., 0., 0.};
     sensor_msgs::ImuConstPtr imu;
     int status = 0;
     int service = 0;
@@ -25,11 +29,14 @@ class GNSSData {
     static bool origin_position_inited ;
 
   public: 
+  
+    // 进行初始化  
     void InitOriginPosition()
     {
       geo_converter.Reset(latitude, longitude, altitude);
       origin_position_inited = true;
     }
+
     void UpdateXYZ()
     {
         if (!origin_position_inited) {
@@ -37,6 +44,7 @@ class GNSSData {
         }
       geo_converter.Forward(latitude, longitude, altitude, local_E, local_N, local_U);
     }
+
     static bool SyncData(std::deque<GNSSData>& UnsyncedData, std::deque<GNSSData>& SyncedData, double sync_time);
 };
 

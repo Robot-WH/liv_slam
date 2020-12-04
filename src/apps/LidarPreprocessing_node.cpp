@@ -30,8 +30,8 @@ public:
     points_pub = nh.advertise<sensor_msgs::PointCloud2> ("/processed_points", 10);                                       // 初始化发布器      
     // 注意： scan_cb()要定义  不然编译不过
     //points_sub = nh.subscribe<sensor_msgs::PointCloud2> ("/velodyne_points", 100, &LidarPreprocessing::scan_cb, this);    
-    //points_sub = nh.subscribe<sensor_msgs::PointCloud2> ("/kitti/velo/pointcloud", 100, &LidarPreprocessing::scan_cb, this);  
-    points_sub = nh.subscribe<sensor_msgs::PointCloud2> ("/rslidar_points", 100, &LidarPreprocessing::scan_cb, this);   
+    points_sub = nh.subscribe<sensor_msgs::PointCloud2> ("/kitti/velo/pointcloud", 100, &LidarPreprocessing::scan_cb, this);  
+    // points_sub = nh.subscribe<sensor_msgs::PointCloud2> ("/rslidar_points", 100, &LidarPreprocessing::scan_cb, this);   
     process_init();                 // 初始化      
   }  
   virtual ~LidarPreprocessing() {}
@@ -67,16 +67,16 @@ void LidarPreprocessing::process_init()
   float downsample_resolution = private_nh.param<double>("downsample_resolution", 0.1);
   use_downsample_filter = private_nh.param<bool>("use_downsample_filter", true);
   if(use_downsample_filter){
-  cout<<"use_downsample_filter:true"<<endl;
-  cout<<"downsample: VOXELGRID,resolution: "<<downsample_resolution<<endl;
-  // 创建指向体素滤波器VoxelGrid的智能指针    
-  boost::shared_ptr<pcl::VoxelGrid<PointT>> voxelgrid(new pcl::VoxelGrid<PointT>());
-  voxelgrid->setLeafSize(downsample_resolution, downsample_resolution, downsample_resolution);
-  downsample_filter = voxelgrid;
+    cout<<"use_downsample_filter:true"<<endl;
+    cout<<"downsample: VOXELGRID,resolution: "<<downsample_resolution<<endl;
+    // 创建指向体素滤波器VoxelGrid的智能指针    
+    boost::shared_ptr<pcl::VoxelGrid<PointT>> voxelgrid(new pcl::VoxelGrid<PointT>());
+    voxelgrid->setLeafSize(downsample_resolution, downsample_resolution, downsample_resolution);
+    downsample_filter = voxelgrid;
   }
   else{
-  cout<<"disable downsample filter!"<<endl;
-  downsample_filter = NULL;   
+    cout<<"disable downsample filter!"<<endl;
+    downsample_filter = NULL;   
   }
   /***************** 离群点滤波器初始化 ***************************/
   double radius = private_nh.param<double>("radius_r", 0.5);                  

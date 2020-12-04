@@ -6,6 +6,7 @@
 #include <ctime>
 #include <cstdlib>
 #include <chrono>
+#include <string>
 
 class TicToc
 {
@@ -25,6 +26,13 @@ class TicToc
         end = std::chrono::system_clock::now();
         std::chrono::duration<double> elapsed_seconds = end - start;
         return elapsed_seconds.count() * 1000;
+    }
+
+    void toc(std::string str)
+    {
+        end = std::chrono::system_clock::now();
+        std::chrono::duration<double> elapsed_seconds = end - start;
+        std::cout<< str << "time: " << elapsed_seconds.count() * 1000<<std::endl;
     }
 
   private:

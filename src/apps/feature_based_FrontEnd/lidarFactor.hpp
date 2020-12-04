@@ -23,7 +23,7 @@ struct LidarEdgeFactor
 		Eigen::Matrix<T, 3, 1> lpa{T(last_point_a.x()), T(last_point_a.y()), T(last_point_a.z())};
 		Eigen::Matrix<T, 3, 1> lpb{T(last_point_b.x()), T(last_point_b.y()), T(last_point_b.z())};
 
-		//Eigen::Quaternion<T> q_last_curr{q[3], T(s) * q[0], T(s) * q[1], T(s) * q[2]};
+		// Eigen::Quaternion<T> q_last_curr{q[3], T(s) * q[0], T(s) * q[1], T(s) * q[2]};
 		// 畸变去除    
 		Eigen::Quaternion<T> q_last_curr{q[3], q[0], q[1], q[2]};
 		Eigen::Quaternion<T> q_identity{T(1), T(0), T(0), T(0)};
@@ -62,10 +62,11 @@ struct LidarPlaneFactor
 					 Eigen::Vector3d last_point_l_, Eigen::Vector3d last_point_m_, double s_)
 		: curr_point(curr_point_), last_point_j(last_point_j_), last_point_l(last_point_l_),
 		  last_point_m(last_point_m_), s(s_)
-	{
+	{   // 求平面的法向量 
 		ljm_norm = (last_point_j - last_point_l).cross(last_point_j - last_point_m);
 		ljm_norm.normalize();
 	}
+
     // 残差构建 
 	template <typename T>
 	bool operator()(const T *q, const T *t, T *residual) const
@@ -79,11 +80,13 @@ struct LidarPlaneFactor
 
 		//Eigen::Quaternion<T> q_last_curr{q[3], T(s) * q[0], T(s) * q[1], T(s) * q[2]};
 		// 对当前点p 进行畸变矫正   
+		// 先用q构造去除畸变后旋转
 		Eigen::Quaternion<T> q_last_curr{q[3], q[0], q[1], q[2]};
 		Eigen::Quaternion<T> q_identity{T(1), T(0), T(0), T(0)};
 		q_last_curr = q_identity.slerp(T(s), q_last_curr);
+		// 用t构造去除畸变的平移 
 		Eigen::Matrix<T, 3, 1> t_last_curr{T(s) * t[0], T(s) * t[1], T(s) * t[2]};
-
+        // 将当前点按照变换 q_last_curr, t_last_curr进行转换 
 		Eigen::Matrix<T, 3, 1> lp;
 		lp = q_last_curr * cp + t_last_curr;
         
@@ -102,7 +105,8 @@ struct LidarPlaneFactor
 			new LidarPlaneFactor(curr_point_, last_point_j_, last_point_l_, last_point_m_, s_)));
 	}
 
-	Eigen::Vector3d curr_point, last_point_j, last_point_l, last_point_m;
+	Eigen::Vector3d curr_point;   // 当前点
+	Eigen::Vector3d last_point_j, last_point_l, last_point_m;             // 平面的3个点 
 	Eigen::Vector3d ljm_norm;
 	double s;
 };

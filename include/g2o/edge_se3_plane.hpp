@@ -79,6 +79,7 @@ namespace g2o {
 				}
 			return true;
 		}
+		
 		virtual bool write(std::ostream& os) const override {
 			Eigen::Vector4d v = _measurement.toVector();
 			os << v(0) << " " << v(1) << " " << v(2) << " " << v(3) << " ";
