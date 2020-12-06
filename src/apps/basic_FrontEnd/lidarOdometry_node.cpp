@@ -143,7 +143,7 @@ Eigen::Matrix4f lidarOdometry_node::matching(const ros::Time& stamp, const pcl::
     else
     {
         float ndt_score = registration->getFitnessScore();   // 获得得分
-        ROS_INFO_STREAM ( "front score: " << ndt_score);
+        // ROS_INFO_STREAM ( "front score: " << ndt_score);
         // 认为匹配不好 
         if(ndt_score>1)
         {
@@ -287,7 +287,7 @@ void lidarOdometry_node::cloud_callback(const sensor_msgs::PointCloud2ConstPtr& 
     Eigen::Matrix4f pose = matching(cloud_msg->header.stamp, cloud);
     //float seconds = float(clock( ) - begin_time) / CLOCKS_PER_SEC ;
     //cout << "front matching time："<<seconds << endl ;
-    printf("odometry time %f ms \n", t_pub.toc());
+    // printf("odometry time %f ms \n", t_pub.toc());
     // 发布话题     lidar_frame_id =   /lidar_odom
     publish_odometry(cloud_msg->header.stamp, lidar_frame_id, pose);
 }

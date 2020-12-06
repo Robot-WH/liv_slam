@@ -32,7 +32,7 @@ class TicToc
     {
         end = std::chrono::system_clock::now();
         std::chrono::duration<double> elapsed_seconds = end - start;
-        std::cout<< str << "time: " << elapsed_seconds.count() * 1000<<std::endl;
+        std::cout<< str << " time: " << elapsed_seconds.count() * 1000<<" ms"<<std::endl;
     }
 
   private:
