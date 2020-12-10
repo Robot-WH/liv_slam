@@ -940,7 +940,7 @@ void local_optimize()
   std::cout << "chi2: (before)" << chi2 << " -> (after)" << optimizer.chi2() << std::endl;
   std::cout << "time: " << boost::format("%.3f") % (t2 - t1).toSec() << "[sec]" << std::endl;
 
-  for(int i=0; i<wait_optimize_keyframes.size(); i++)
+  for(uint8_t i=0; i<wait_optimize_keyframes.size(); i++)
   {
     wait_optimize_keyframes[i]->Pose = vertexs[i]->estimate();    //  获取优化结果
     //  ROS_INFO_STREAM("i: "<<i<<"after optimize: "<<wait_optimize_keyframes[i]->Pose.matrix().cast<float>()); 
@@ -1090,14 +1090,14 @@ void global_optimize(const Loop::Ptr& loop)
 
   std::cout << "optimize!!" << std::endl;
   auto t1 = ros::WallTime::now();
-  int iterations = optimizer.optimize(30);
+  optimizer.optimize(30);
 
   auto t2 = ros::WallTime::now();
   std::cout << "done" << std::endl;
   std::cout << "chi2: (before)" << chi2 << " -> (after)" << optimizer.chi2() << std::endl;
   std::cout << "time: " << boost::format("%.3f") % (t2 - t1).toSec() << "[sec]" << std::endl;
   
-  for(int i=0; i<vertexs.size(); i++)
+  for(uint32_t i=0; i<vertexs.size(); i++)
   {
      keyframes[frist_kf_index+i]->Pose = vertexs[i]->estimate();    //  获取优化结果
   }
@@ -1336,7 +1336,8 @@ void params_init(ros::NodeHandle nh)
     // 平面优化
     enable_plane_optimize = nh.param<bool>("enable_plane_optimize", false);
     // 关键帧点云保存的空间
-    key_frames_path = "/home/mini/code/localization_ws/src/liv_slam/Map";  
+    nh.getParam ("KeyFrames_Path", key_frames_path );
+    std::cout<<"keyframes save path: "<<key_frames_path <<std::endl;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

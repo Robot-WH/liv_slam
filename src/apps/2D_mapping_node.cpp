@@ -3,6 +3,7 @@
 #include <queue>
 #include <thread>
 #include <mutex>
+#include <string>
 
 #include <eigen3/Eigen/Dense>
 #include <ros/ros.h>
@@ -141,12 +142,11 @@ void grid_map_create()
       /* 用opencv图像显示地图 */
       //cv::Mat map = g_map->toCvMat();
       //cv::imshow ( "map", map );
-      //cv::waitKey ( 1 );
+      //cv::waitKey(10);
     }
     // 2ms的延时  
     std::chrono::milliseconds dura(1);
     std::this_thread::sleep_for(dura);
-
   }
 }
 
@@ -159,7 +159,7 @@ void send_map()
     nav_msgs::OccupancyGrid occ_map;
     g_map->toRosOccGridMap ( "map", occ_map );
     g_map_puber.publish ( occ_map );
-    // 100ms的延时  
+    // 500ms的延时  
     std::chrono::milliseconds dura(500);
     std::this_thread::sleep_for(dura);
   }
@@ -169,7 +169,7 @@ int main ( int argc, char **argv )
 {
     /***** 初始化ROS *****/
     ros::init ( argc, argv, "GridMapping_node" );
-    ros::NodeHandle nh;
+    ros::NodeHandle nh("~");
     
     // /***** 加载参数 *****/
     int map_sizex, map_sizey, map_initx, map_inity;
@@ -204,12 +204,15 @@ int main ( int argc, char **argv )
     //std::string map_image_save_dir, map_config_save_dir;
     //nh.getParam ( "/map_image_save_dir", map_image_save_dir );
     //nh.getParam ( "/map_config_save_dir", map_config_save_dir );
-    
+    // 激光话题名称
+    std::string laser_topic;
+    nh.getParam ( "laser_topic", laser_topic );
+
     map_sizex = 6000;
     map_sizey = 6000;
     map_initx = 3000;
     map_inity = 3000;
-    map_cell_size = 0.3;  
+    map_cell_size = 0.1;  
     
     P_occ = 0.6;
     P_free = 0.4;
@@ -226,8 +229,8 @@ int main ( int argc, char **argv )
 
     /***** 初始Topic *****/
     g_odom_suber = nh.subscribe ( "/odom_opt_high", 1000, odometryCallback );          // odom    
-    laser_suber = nh.subscribe ( "/laser_scan", 1000, laserCallback );                 // laser
-    g_map_puber = nh.advertise<nav_msgs::OccupancyGrid> ( "mapping/grid_map", 1 );     // 发布占据栅格地图  
+    laser_suber = nh.subscribe ( laser_topic, 1000, laserCallback );                 // laser
+    g_map_puber = nh.advertise<nav_msgs::OccupancyGrid> ( "/mapping/grid_map", 1 );     // 发布占据栅格地图  
     odom2map_suber = nh.subscribe ( "/odom2pub", 10, odom2mapCallback );               // odom - map  
     
     std::thread process{grid_map_create}; 

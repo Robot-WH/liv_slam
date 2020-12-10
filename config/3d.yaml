@@ -1,0 +1,2 @@
+Pointcloud_Topic: /velodyne_points
+KeyFrames_Path: /home/xiaoqiang/robot_ws/src/liv_slam-master/Map

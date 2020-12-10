@@ -26,13 +26,14 @@ class LidarPreprocessing
 public:  
   LidarPreprocessing()  
   {  
-    private_nh = ros::NodeHandle("~");       // 初始化私有句柄  
-    points_pub = nh.advertise<sensor_msgs::PointCloud2> ("/processed_points", 10);                                       // 初始化发布器      
+    private_nh = ros::NodeHandle("~");       // 初始化私有句柄 
+    process_init();                          // 初始化    
+    points_pub = private_nh.advertise<sensor_msgs::PointCloud2> ("/processed_points", 10);                                       // 初始化发布器      
     // 注意： scan_cb()要定义  不然编译不过
     //points_sub = nh.subscribe<sensor_msgs::PointCloud2> ("/velodyne_points", 100, &LidarPreprocessing::scan_cb, this);    
-    points_sub = nh.subscribe<sensor_msgs::PointCloud2> ("/kitti/velo/pointcloud", 100, &LidarPreprocessing::scan_cb, this);  
+    // points_sub = nh.subscribe<sensor_msgs::PointCloud2> ("/kitti/velo/pointcloud", 100, &LidarPreprocessing::scan_cb, this);  
     // points_sub = nh.subscribe<sensor_msgs::PointCloud2> ("/rslidar_points", 100, &LidarPreprocessing::scan_cb, this);   
-    process_init();                 // 初始化      
+    points_sub = private_nh.subscribe<sensor_msgs::PointCloud2> (lidar_topic, 100, &LidarPreprocessing::scan_cb, this);  
   }  
   virtual ~LidarPreprocessing() {}
   //回调函数  接收发送过来的点云msg  用于定位
@@ -48,6 +49,8 @@ private:
   ros::NodeHandle nh;   
   ros::NodeHandle private_nh;      // 私有句柄
 
+  string lidar_topic;  
+
   ros::Publisher points_pub;       // 创建一个点云处理的
   ros::Subscriber points_sub;      // 创建一个订阅者  订阅话题laser_scan
 
@@ -58,11 +61,14 @@ private:
   float distance_far_thresh;   
 
   bool use_downsample_filter = false; 
-
 };
+
 // 初始化  
 void LidarPreprocessing::process_init()
 { 
+  // 订阅雷达话题
+  private_nh.getParam ( "Pointcloud_Topic", lidar_topic );
+  cout<<"lidar topic: "<<lidar_topic<<endl;
   /***************** 降采样滤波器初始化 *******************/
   float downsample_resolution = private_nh.param<double>("downsample_resolution", 0.1);
   use_downsample_filter = private_nh.param<bool>("use_downsample_filter", true);
@@ -130,7 +136,7 @@ void LidarPreprocessing::scan_cb(const sensor_msgs::PointCloud2 cloud_msg)
   // output.header.stamp=ros::Time::now(); 
   output.header.stamp=cloud_msg.header.stamp; 
   output.header.frame_id = "/lidar_opt_odom";
-//   cout<<"frame_id: "<<output.header.frame_id<<endl;
+  //   cout<<"frame_id: "<<output.header.frame_id<<endl;
   points_pub.publish(output);
     
 }

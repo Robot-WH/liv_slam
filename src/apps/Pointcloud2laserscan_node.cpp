@@ -120,6 +120,9 @@ void cloudCb(const sensor_msgs::PointCloud2ConstPtr& cloud_msg)
 
 void laserInit(ros::NodeHandle& n)
 {
+  // 订阅激光话题名称
+  std::string lidar_topic;
+  n.param<std::string>("Pointcloud_Topic", lidar_topic, "/rslidar_points");
   n.param<std::string>("target_frame", target_frame_, "/lidar_opt_odom");
   n.param<double>("min_height", min_height_, std::numeric_limits<double>::min());
   n.param<double>("max_height", max_height_, std::numeric_limits<double>::max());
@@ -134,7 +137,7 @@ void laserInit(ros::NodeHandle& n)
 
   n.param<bool>("use_inf", use_inf_, true);
 
-  pointcloud_sub = n.subscribe<sensor_msgs::PointCloud2>("/rslidar_points", 1000, cloudCb);
+  pointcloud_sub = n.subscribe<sensor_msgs::PointCloud2>(lidar_topic, 1000, cloudCb);
   laserscan_pub = n.advertise<sensor_msgs::LaserScan>("/laser_scan", 10);
 }
 

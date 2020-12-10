@@ -1,3 +1,6 @@
+
+laser_topic: /laser_scan
+
 map_image_save_dir: /home/yds/map.png
 map_config_save_dir: /home/yds/map.yaml
 

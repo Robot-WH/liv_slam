@@ -579,7 +579,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "scanRegistration");
-    ros::NodeHandle nh;
+    ros::NodeHandle nh("~");
     
     // 读取扫描的线数
     nh.param<int>("scan_line", N_SCANS, 16);
@@ -593,7 +593,11 @@ int main(int argc, char **argv)
         printf("only support velodyne with 16, 32 or 64 scan line!");
         return 0;
     }
-    ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>("/rslidar_points", 100, laserCloudHandler);
+    // 雷达话题
+    std::string lidar_topic;
+    nh.getParam ( "Pointcloud_Topic", lidar_topic );
+    ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>(lidar_topic, 100, laserCloudHandler);
+    //ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>("/rslidar_points", 100, laserCloudHandler);
     //ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>("/kitti/velo/pointcloud", 100, laserCloudHandler);
     //ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>("/velodyne_points", 100, laserCloudHandler);
     // 滤波处理后的全部点云
