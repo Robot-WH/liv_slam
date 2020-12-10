@@ -332,7 +332,7 @@ void MapOptimize()
           else
           {
             float ndt_score = registration->getFitnessScore();   // 获得得分
-            ROS_INFO_STREAM ( "Map matching converged "<<" front score: " << ndt_score);  
+            // ROS_INFO_STREAM ( "Map matching converged "<<" front score: " << ndt_score);  
             if(ndt_score>1)
             {
                // ROS_INFO("Map matching error!!!!!");
@@ -342,7 +342,7 @@ void MapOptimize()
 
           Pose_opt_curr = registration->getFinalTransformation();       // 优化结果  
           Update();                 // 将Pose_opt_curr转换成四元数    同时  更新转换矩阵   
-          printf("map match time %f ms \n", t_pub.toc());
+          // printf("map match time %f ms \n", t_pub.toc());
        }  
 
 //       ROS_INFO_STREAM("do update map"); 

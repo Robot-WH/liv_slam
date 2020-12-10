@@ -1,14 +1,11 @@
 #include "loop_detect/scanContext/Scancontext.h"
 
 // 通过全局描述子 - SC描述子 , 描述两帧之间的相似度
-// 能否保证相似度得分随着平移的增加而缓慢下降 ??  这个将决定是否可以远距离回环 !  以及重定位 !  
+// 那么 能否保证相似度得分随着平移的增加而缓慢下降 ??  这个将决定是否可以远距离回环 !  以及重定位 !
+// sc描述子估计不行
 
-
-void coreImportTest (void)
-{
-    cout << "scancontext lib is successfully imported." << endl;
-} // coreImportTest
-
+// 类外初始化  
+SCManager* SCManager::sc_ = nullptr;
 
 float rad2deg(float radians)
 {
@@ -21,7 +18,7 @@ float deg2rad(float degrees)
 }
 
 // x轴正方向为轴 0度   逆时针增大
-float xy2theta( const float & _x, const float & _y )
+float SCManager::xy2theta( const float & _x, const float & _y )
 {
     if ( _x >= 0 & _y >= 0) 
         return (180/M_PI) * atan(_y / _x);
@@ -40,7 +37,7 @@ float xy2theta( const float & _x, const float & _y )
  * @brief 对 _mat 的列   进行 _num_shift的平移
  * @param[in] _num_shift 平移量
  **/
-MatrixXd circshift( MatrixXd &_mat, int _num_shift )
+MatrixXd SCManager::circshift( MatrixXd &_mat, int _num_shift )
 {
     // shift columns to right direction 
     assert(_num_shift >= 0);
@@ -65,7 +62,7 @@ MatrixXd circshift( MatrixXd &_mat, int _num_shift )
 
 
 // @brief eigen 类型数据转换为 vector 数据 
-std::vector<float> eig2stdvec( MatrixXd _eigmat )
+std::vector<float> SCManager::eig2stdvec( MatrixXd _eigmat )
 {
     std::vector<float> vec( _eigmat.data(), _eigmat.data() + _eigmat.size() );
     return vec;
@@ -175,7 +172,7 @@ std::pair<double, int> SCManager::distanceBtnScanContext( MatrixXd &_sc1, Matrix
  **/
 MatrixXd SCManager::makeScancontext( pcl::PointCloud<SCPointType> & _scan_down )
 {
-    TicToc t_making_desc;
+    //TicToc t_making_desc;
     
     int num_pts_scan_down = _scan_down.points.size();
 
@@ -218,7 +215,7 @@ MatrixXd SCManager::makeScancontext( pcl::PointCloud<SCPointType> & _scan_down )
             if( desc(row_idx, col_idx) == NO_POINT )
                 desc(row_idx, col_idx) = 0;
 
-    t_making_desc.toc("PolarContext making");
+    //t_making_desc.toc("PolarContext making");
 
     return desc;
 } // SCManager::makeScancontext
@@ -270,7 +267,7 @@ MatrixXd SCManager::makeSectorkeyFromScancontext( Eigen::MatrixXd &_desc )
  * @param[in] _scan_down 输入点云   SCPointType = pcl::PointXYZI
  * @details 提取sc描述子的全部流程  
  **/
-void SCManager::makeAndSaveScancontextAndKeys( pcl::PointCloud<SCPointType> & _scan_down )
+void SCManager::ExtractInfomationFromScanForLoopDetect( pcl::PointCloud<SCPointType> & _scan_down )
 {
     Eigen::MatrixXd sc = makeScancontext(_scan_down);                  // v1 提取sc全局特征描述符
     Eigen::MatrixXd ringkey = makeRingkeyFromScancontext( sc );        // 求 ring key 特征  
@@ -288,13 +285,13 @@ void SCManager::makeAndSaveScancontextAndKeys( pcl::PointCloud<SCPointType> & _s
 
 
 // 闭环检测
-std::pair<int, float> SCManager::detectLoopClosureID ( void )
+std::pair<int, float> SCManager::DetectLoopClosureID ( void )
 {
-    int loop_id { -1 };                               // init with -1, -1 means no loop (== LeGO-LOAM's variable "closestHistoryFrameID")
-    // 首先将最新的帧的sc描述子提取出来  进行回环检测 
+    std::cout << "Detect loop --"<<std::endl;
+    int loop_id{-1}; // init with -1, -1 means no loop (== LeGO-LOAM's variable "closestHistoryFrameID")
+    // 首先将最新的帧的sc描述子提取出来  进行回环检测
     auto curr_key = polarcontext_invkeys_mat_.back(); // current observation (query)      提取最新一帧ring-key
     auto curr_desc = polarcontexts_.back();           // current observation (query)      提取最新的sc描述子  
-
     /* 
      * step 1: candidates from ringkey tree_  首先查找ring key  获得候选关键帧
      */
@@ -370,16 +367,16 @@ std::pair<int, float> SCManager::detectLoopClosureID ( void )
     if( min_dist < SC_DIST_THRES )
     {
         loop_id = nn_idx; 
-    
+        
         // std::cout.precision(3); 
-        cout << "[Loop found] Nearest distance: " << min_dist << " btn " << polarcontexts_.size()-1 << " and " << nn_idx << "." << endl;
-        cout << "[Loop found] yaw diff: " << nn_align * PC_UNIT_SECTORANGLE << " deg." << endl;
+        cout << "[Loop found!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!] Nearest distance: " << min_dist <<"< SC_DIST_THRES: "<< SC_DIST_THRES 
+             << " curr: " << polarcontexts_.size()-1 << " and pre: " << nn_idx << "." << endl;
+        cout << "[Loop found!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!] yaw diff: " << nn_align * PC_UNIT_SECTORANGLE << " deg." << endl;
     }
     else
     {
         std::cout.precision(3); 
-        cout << "[Not loop] Nearest distance: " << min_dist << " btn " << polarcontexts_.size()-1 << " and " << nn_idx << "." << endl;
-        cout << "[Not loop] yaw diff: " << nn_align * PC_UNIT_SECTORANGLE << " deg." << endl;
+        cout << "[Not loop] Nearest distance: " << min_dist << "> SC_DIST_THRES: "<< SC_DIST_THRES << endl;
     }
 
     // To do: return also nn_align (i.e., yaw diff)

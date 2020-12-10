@@ -1,7 +1,8 @@
-
 /**
- *  后端优化节点：  
- *   输入数据：   1、里程计数据    2、地面约束数据     3、GNSS数据    4、IMU数据   
+ *   @brief 基于普通图优化的后端优化节点, 两个线程 , 线程一: 完成后端优化.  线程二: 完成回环检测 
+ *   @details 输入数据： 1、前端里程计约束    2、地面约束数据     3、GNSS数据   4. 回环约束 
+ *   @author wenhao. li
+ *   @date 2020/4/25  
  **/
 
 #include <ctime>
@@ -19,15 +20,7 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl_ros/point_cloud.h>     // pcl::fromROSMsg
 #include <queue>
-
-#include "ros_utils.hpp" 
-#include "keyframe_updater.hpp" 
-#include "keyframe.hpp"
-#include "loop_detector.hpp"
-#include "information_matrix_calculator.hpp"
-#include "map_cloud_generator.hpp"
-#include "nmea_sentence_parser.hpp"
-#include "GNSSdata.hpp"
+#include <deque>
 
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
@@ -63,6 +56,15 @@
 
 #include <ros_time_hash.hpp>
 
+#include "ros_utils.hpp" 
+#include "keyframe_updater.hpp" 
+#include "keyframe.hpp"
+#include "loop_detector.hpp"
+#include "information_matrix_calculator.hpp"
+#include "map_cloud_generator.hpp"
+#include "nmea_sentence_parser.hpp"
+#include "GNSSdata.hpp"
+#include "loop_detect/scanContext/Scancontext.h"
 
 typedef pcl::PointXYZI PointT;  
 using namespace std;
@@ -117,7 +119,7 @@ std::vector<KeyFrameSnapshot::Ptr> keyframes_snapshot;
 // 局部优化每次处理的最大帧数  
 int max_keyframes_per_update;
 std::vector<KeyFrame::Ptr> wait_optimize_keyframes;
-std::vector<KeyFrame::Ptr> wait_loopDetect_keyframes;
+std::queue<KeyFrame::Ptr> wait_loopDetect_keyframes;
 
 g2o::VertexPlane* floor_plane_node;
 
@@ -139,12 +141,9 @@ std::unique_ptr<NmeaSentenceParser> nmea_parser;               // nmea数据解�
 
 std::mutex keyframe_queue_mutex;
 std::mutex trans_odom2map_mutex;
-std::mutex floor_coeffs_queue_mutex;
 std::mutex keyframes_snapshot_mutex;
-std::mutex main_thread_mutex;
+std::mutex optimize_mutex;
 std::mutex GNSS_queue_mutex;
-
-
 //ros::WallTimer optimization_timer;
 //ros::WallTimer map_publish_timer;
 
@@ -181,7 +180,6 @@ bool IMU_pose_inited = true;
 bool enable_GNSS_optimize = false;  
 bool enable_plane_optimize = false;  
 
-std::mutex mBuf;
 // 记录关键帧的index  
 int KF_index = 0;
 Eigen::Matrix4f lidar_to_imu = Eigen::Matrix4f::Identity();
@@ -266,7 +264,7 @@ void TransformWgs84ToMap(GNSSData &gnss_data, Eigen::Quaterniond const& orientat
  * @brief 将关键帧与GNSS的数据进行插值对齐
  * 
  */
-void flush_GNSS_queue()
+void AlignGnssDateAndKeyframe()
 { 
   /******************************** 首先进行 GNSS 与 关键帧待处理队列 wait_optimize_keyframes 数据对齐 ******************************/    
   // 容器非空   
@@ -430,8 +428,6 @@ void cloudCallback(const nav_msgs::OdometryConstPtr& odom_msg, const sensor_msgs
 
   // 通过点云与里程计和累计距离等来创建关键帧   实际的关键帧中就不包含点云数据了  
   KeyFrame::Ptr keyframe(new KeyFrame(stamp, odom, KF_index, cloud));
-  // 线程锁开启
-  std::lock_guard<std::mutex> lock(keyframe_queue_mutex);
   new_keyframe_queue.push_back(keyframe);     // 加入处理队列
   // KF index 更新  
   KF_index++;
@@ -496,12 +492,11 @@ void gnssCallback(const sensor_msgs::ImuConstPtr& imu_msg, const sensor_msgs::Na
   GNSS_queue.push_back(gnss_data);
 }
 
-
 /************************************************************优化处理*********************************************************/
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-bool Parse_data()
+// TODO:   这个函数可以想办法 去掉 !!!!!!!!!!!!!!!!!!!!!
+bool ProcessData()
 {
-
   /*
   // 还未初始化  
   // 静态初始化   静止放置  等待初始化完成  
@@ -567,7 +562,7 @@ bool Parse_data()
   {
     return false;
   }
-
+  
   trans_odom2map_mutex.lock();
   Eigen::Isometry3d odom2map(trans_odom2map.cast<double>());
   trans_odom2map_mutex.unlock();
@@ -580,12 +575,10 @@ bool Parse_data()
     const auto& keyframe = new_keyframe_queue[i];
     // odom系与map系对齐 
     keyframe->Pose = odom2map * keyframe->odom;  
-    // 计算该关键帧的全局描述子
-    
     // 放置到待优化容器中     
     wait_optimize_keyframes.push_back(keyframe);   
-    // 放置到待回环检测容器中
-    wait_loopDetect_keyframes.push_back(keyframe); 
+    // 放置到待回环检测队列中
+    wait_loopDetect_keyframes.push(keyframe); 
   }
 
   new_keyframe_queue.erase(new_keyframe_queue.begin(), new_keyframe_queue.begin() + num_processed);
@@ -735,7 +728,6 @@ visualization_msgs::MarkerArray create_marker_array(const ros::Time& stamp)
   return markers;
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 局部优化      里程计约束+地面约束+GNSS约束   
 void local_optimize()
@@ -830,7 +822,6 @@ void local_optimize()
       // 高度约束 
       g2o::EdgeSE3PriorXYZ* prior_height_edge(new g2o::EdgeSE3PriorXYZ());
       Eigen::Vector3d twb = v->estimate().translation();   // XYZ 
-      std::cout<<" origin twb ----------------------------"<<std::endl<<twb.transpose()<<std::endl;
       twb[2] = 0;  
       prior_height_edge->setMeasurement(twb);              // 设置观测先验  
       prior_height_edge->vertices()[0] = v;
@@ -894,7 +885,6 @@ void local_optimize()
         edge->setInformation(information);
         optimizer.addEdge(edge);
       }
-
       continue;
     }
 
@@ -1111,12 +1101,11 @@ void global_optimize(const Loop::Ptr& loop)
 //void optimization_timer_callback(const ros::WallTimerEvent& event) {
 void Optimization() 
 {
-  std::lock_guard<std::mutex> lock(main_thread_mutex);
-  
   // 执行局部优化
   local_optimize();
   // loop detection
-  Loop::Ptr loop = loop_detector->detect(keyframes, wait_optimize_keyframes);
+  Loop::Ptr loop;
+ // = loop_detector->detect(keyframes, wait_optimize_keyframes);
   std::copy(wait_optimize_keyframes.begin(), wait_optimize_keyframes.end(), std::back_inserter(keyframes));
   wait_optimize_keyframes.clear();
   // 如果存在回环 
@@ -1150,7 +1139,7 @@ void Optimization()
   // 如果有订阅者  发布odom到map坐标系的变换  
   if(odom2map_pub.getNumSubscribers()) 
   {
-    ROS_INFO_STREAM("BackEnd_node - trans_odom2map: "<<std::endl<<trans_odom2map);   
+    // ROS_INFO_STREAM("BackEnd_node - trans_odom2map: "<<std::endl<<trans_odom2map);   
     // 构造 ROS Msg
     geometry_msgs::TransformStamped ts = matrix2transform(keyframe->stamp, trans_odom2map.cast<float>(), map_frame_id, odom_frame_id);
     odom2map_pub.publish(ts);
@@ -1214,15 +1203,17 @@ void BackEnd_process()
         double Optimize_diff_time = (ros::Time::now() - Optimize_previous_time).toSec();     // 计算时间差
         double Map_updata_diff_time = (ros::Time::now() - Map_updata_previous_time).toSec();     // 计算时间差
         
-        if(Parse_data())                       // 数据处理  对齐GNSS, 计算描述子, 以及其他观测量  
+        if(ProcessData())            
         {
           // 图优化  周期控制    进行优化的时候  回环检测线程阻塞 !!!!
           if(Optimize_diff_time>= Optimize_duration)
           { 
+            // 优化前加锁  保证速度  
+            std::lock_guard<std::mutex> lock(optimize_mutex);
             Optimize_previous_time = ros::Time::now();
             // 批量处理  -  进行GNSS 与keyframe 匹配
-            flush_GNSS_queue();
-            // 进行优化 
+            AlignGnssDateAndKeyframe();
+            // 进行优化    处理 GNSS观测, 先验约束, 回环约束, 里程计约束
             Optimization();
             // ROS_INFO_STREAM("Graph optimization!");
           }
@@ -1247,10 +1238,33 @@ void loopDetect_process()
 {
   while(1)
   {
-     
+    // 如果存在待回环检测的帧  
+    if(!wait_loopDetect_keyframes.empty())
+    {
+      /************************************ 执行后端优化的时候 阻塞该线程 *****************************************/
+      std::lock_guard<std::mutex> lock(optimize_mutex);
+      KeyFrame::Ptr keyframe_ptr = wait_loopDetect_keyframes.front();
+      wait_loopDetect_keyframes.pop();   
+      // 先对该帧提取描述子 
+      std::string file_path = key_frames_path + "/key_frame_" + std::to_string(keyframe_ptr->get_id()) + ".pcd";
+      pcl::PointCloud<PointT>::Ptr scan_cloud_ptr(new pcl::PointCloud<PointT>);
+      pcl::io::loadPCDFile(file_path, *scan_cloud_ptr);
+      // TODO: 实现回环基类   采用多态形式 
+      SCManager* sc = SCManager::GetInstance();                              // 获取sc描述子的实例
+      TicToc tt;  
+      sc->ExtractInfomationFromScanForLoopDetect(*scan_cloud_ptr);
+      tt.toc("extract loop feature");
+      // 然后判断是否需要检测回环      需要检测回环的话  采用 描述子 + 几何位置 串联的检测方法
+      std::pair<int, float> res = sc->DetectLoopClosureID();
+      std::cout << "loop Detect done" << std::endl;
+      // 检测到回环后 执行 粗匹配 + 细匹配 求取变换
+      // 尝试两种 1. 特征提取 + 描述子匹配 + RANSAC + ICP    2.  super4pcs + icp   
+    }
+    // 1ms的延时  
+    std::chrono::milliseconds dura(1);
+    std::this_thread::sleep_for(dura);
   }
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ROS 通信初始化 
@@ -1288,7 +1302,6 @@ void comm_init(ros::NodeHandle nh)
     Sync_GPSIMU.reset(new message_filters::TimeSynchronizer<sensor_msgs::Imu, sensor_msgs::NavSatFix>(*imu_sub, *navsat_sub, 1000));          
     Sync_GPSIMU->registerCallback(boost::bind(&gnssCallback, _1, _2));   
     
-
     // 服务
     //dump_service_server = mt_nh.advertiseService("/hdl_graph_slam/dump", &HdlGraphSlamNodelet::dump_service, this);
     //save_map_service_server = mt_nh.advertiseService("/hdl_graph_slam/save_map", &HdlGraphSlamNodelet::save_map_service, this);

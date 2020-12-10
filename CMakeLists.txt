@@ -139,7 +139,6 @@ add_executable( 2d_GridMapping
 )
 target_link_libraries(2d_GridMapping ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${EIGEN3_LIBS})
 
-
 add_executable(ascanRegistration src/apps/feature_based_FrontEnd/scanRegistration.cpp)
 add_dependencies(ascanRegistration ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(ascanRegistration ${catkin_LIBRARIES} ${PCL_LIBRARIES})
@@ -152,18 +151,22 @@ add_executable(alaserMapping src/apps/feature_based_FrontEnd/laserMapping.cpp)
 add_dependencies(alaserMapping ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(alaserMapping ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${CERES_LIBRARIES})
 
-
-
-add_executable(BackEnd_node
-  src/apps/BackEnd_node.cpp
+# 生成共享库  .so  
+add_library( module_lib SHARED
   src/lib/keyframe.cpp
   src/lib/information_matrix_calculator.cpp
   src/lib/robust_kernel_io.cpp
   src/lib/map_cloud_generator.cpp
+  src/lib/loop_detect/Scancontext.cpp
+)
+
+add_executable(BackEnd_node
+  src/apps/BackEnd_node.cpp
   ${ALL_SRCS}
 )
 add_dependencies(BackEnd_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(BackEnd_node
+  module_lib
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
   ${G2O_TYPES_DATA}
