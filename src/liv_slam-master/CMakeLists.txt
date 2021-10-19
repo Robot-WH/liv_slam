@@ -7,13 +7,6 @@ set(CMAKE_BUILD_TYPE "Release" )
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS_RELEASE "-Wall -g")
 
-## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++14)
-
-## Find catkin macros and libraries
-## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-## is used, also find other catkin packages
-
 find_package(catkin REQUIRED COMPONENTS
   tf
   roscpp
@@ -45,7 +38,6 @@ if (OPENMP_FOUND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
-
 
 add_message_files(
   DIRECTORY msg
@@ -96,8 +88,6 @@ link_directories(
 	${PCL_LIBRARY_DIRS}
   ${OpenCV_LIBRARY_DIRS}
   ${GTSAM_LIBRARY_DIRS}
-  # ${Boost_LIBRARY_DIRS}
-  # /usr/lib/x86_64-linux-gnu/
 )
 
 
@@ -186,7 +176,6 @@ target_link_libraries(mapOptmization
   gtsam
 )
 
-
 add_executable(Segmentation
   src/apps/Segmentation_node.cpp
 )
@@ -195,7 +184,6 @@ target_link_libraries(Segmentation
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
 )
-
 
 add_executable( basic_lidar_odometry
   src/apps/basic_FrontEnd/lidarOdometry_node.cpp
@@ -214,13 +202,6 @@ target_link_libraries(MapOptimator_node
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
 )
-
-# add_library(FilterEstimatorLib SHARED
-  
-# )
-# target_link_libraries( FilterEstimatorLib
-#   # ${ALL_TARGET_LIBRARIES}
-# )
 
 add_executable( FilterFusionOdometry
    src/apps/LIO/FilterLIO/FilterFusionOdometry_node.cpp

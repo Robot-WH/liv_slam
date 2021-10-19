@@ -138,12 +138,9 @@ namespace Estimator{
             {   
                 // 就是求平均值
                 Eigen::Vector3d sum_value;
-
-                for(auto const& gyro : gyro_buf)
-                {
+                for(auto const& gyro : gyro_buf) {
                     sum_value += gyro;
                 }
-
                 return sum_value / gyro_buf.size();   
             }        
     };

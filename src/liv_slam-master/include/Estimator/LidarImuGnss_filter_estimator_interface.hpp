@@ -73,7 +73,6 @@ namespace Estimator{
             bool gnss_initialize_ = false;     
             // lidar初始化标志
             bool lidar_initialize_ = false;
-
     };  
 }
 
