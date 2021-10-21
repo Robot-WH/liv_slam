@@ -12,10 +12,7 @@ namespace Estimator{
     class PositionCorrection
     {
         public:
-            PositionCorrection()
-            {
-            }
-
+            PositionCorrection() {}
             ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             /**
             * @brief ESKF校正 

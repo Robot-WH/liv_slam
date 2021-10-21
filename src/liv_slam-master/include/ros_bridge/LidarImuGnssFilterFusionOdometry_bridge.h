@@ -33,21 +33,18 @@ class LidarImuGnssFilterFusionOdometryBridge : public FusionOdometryBridgeInterf
         nav_msgs::Path GnssPath;                    // 记录gnss轨迹  
         nav_msgs::Path FusionPath;                  // 记录融合后轨迹  
         nav_msgs::Path ImuPredictPath;              // IMU预测的轨迹  
-
         // 维护IMU系相对于world系的姿态    
         Eigen::Matrix3d Rwi = Eigen::Matrix3d::Identity();
         Eigen::Vector3d twi = {0, 0, 0};
         // 通过滤波器估计前后两帧间的运动 
         // 核心！！   主要实现采用eskf/ieskf  融合imu,gps,lidar
         std::unique_ptr<LidarImuGnssFilterEstimatorInterFace> estimator_ptr_;  
-        // 激光scan-map里程计对象
+        // 激光里程计对象
         std::unique_ptr<LidarOdometryInterface>  lidar_odometry_ptr_;  
-
         // 数据缓存队列
         queue<Sensor::ImuDataPtr> imu_buf;  
         queue<Sensor::LidarDataPtr> lidar_buf;  
         queue<Sensor::GnssDataPtr> gnss_buf;
-
         // gnss 融合 开关 
         bool gnss_fusion_switch; 
         // gnss 轨迹显示 开关 
@@ -58,7 +55,6 @@ class LidarImuGnssFilterFusionOdometryBridge : public FusionOdometryBridgeInterf
         bool IMU_path_switch; 
         // 轮速计 融合 开关
         bool wheels_fusion_switch; 
-
         // 线程同步相关
         std::mutex m_buf;
         // 坐标系
@@ -67,9 +63,7 @@ class LidarImuGnssFilterFusionOdometryBridge : public FusionOdometryBridgeInterf
     public:    
         /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         LidarImuGnssFilterFusionOdometryBridge(std::unique_ptr<LidarImuGnssFilterEstimatorInterFace> &estimator_ptr);
-
         ~LidarImuGnssFilterFusionOdometryBridge(){} 
-        
         // 处理线程 
         void Process() override; 
 

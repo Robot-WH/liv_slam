@@ -23,7 +23,6 @@ namespace Sensor{
     struct ImuData 
     {
         double timestamp = 0;      // In second.
-
         Eigen::Vector3d acc = {0,0,0};   // Acceleration in m/s^2
         Eigen::Vector3d gyro = {0,0,0};  // Angular velocity in radian/s.
         Eigen::Quaterniond rot = Eigen::Quaterniond::Identity(); // 旋转  
@@ -70,7 +69,6 @@ namespace Sensor{
     using LidarDataPtr = std::shared_ptr<LidarData>;
     using LidarDataConstPtr = std::shared_ptr<const LidarData>;
 
-    
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     static ImuDataConstPtr ImuDataLinearInterpolation(ImuDataConstPtr const& last_imu, ImuDataConstPtr const& curr_imu, 
                                            double const& timestamp)
@@ -80,9 +78,7 @@ namespace Sensor{
        // 计算插值系数     
        double front_scale = t2 / (t2+t1);
        double back_scale = t1 / (t2+t1);
-
        ImuDataPtr interpolation_imu{new ImuData{}}; 
-
        interpolation_imu->acc = front_scale * last_imu->acc + back_scale * curr_imu->acc; 
        interpolation_imu->gyro = front_scale * last_imu->gyro + back_scale * curr_imu->gyro; 
        interpolation_imu->rot = Eigen::Quaterniond::Identity(); // 旋转  
@@ -92,9 +88,7 @@ namespace Sensor{
        return interpolation_imu;
     }
     
-
-
-}
+} // namespace Sensor 
 
 
 #endif

@@ -27,34 +27,13 @@ namespace Estimator{
   template<typename EstimatedStates, int _dim_states >
   class LidarImuGnssFilterEstimatorWorldCentre : public LidarImuGnssFilterEstimatorInterFace
   {
-    private:
-
-        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
-        /**
-         * @brief 初始化
-         * @param timestamp 初始化的时间戳 
-         */
-        bool estimatorInitialize(double const& timestamp);
-
-        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        /**
-         * @brief 估计器状态协方差矩阵初始化 
-         * @param states StatesWithImu类型 初始化的状态
-         */
-        void estimatorStatesCovarianceInitialize(StatesWithImu &states);
-
     public: 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         LidarImuGnssFilterEstimatorWorldCentre(float const& imu_acc_noise, float const& imu_gyro_noise, 
                          float const& imu_acc_bias_noise, float const& imu_gyro_bias_noise,
                          std::shared_ptr<Model::ImuMotionModelInterface> imu_motion_model_ptr,
                          Eigen::Matrix3d Rlb, Eigen::Vector3d tlb, Eigen::Matrix3d Ril, Eigen::Vector3d til,
-                         Eigen::Matrix3d Rig, Eigen::Vector3d tig) : Rlb_(Rlb), tlb_(tlb), Ril_(Ril), til_(til), Rig_(Rig), tig_(tig)
-        {   
-            // imu预测器初始化  
-            imu_predict_ = ImuPredictor(imu_acc_noise, imu_gyro_noise, imu_acc_bias_noise, 
-                                                                        imu_gyro_bias_noise, imu_motion_model_ptr);  
-        }
+                         Eigen::Matrix3d Rig, Eigen::Vector3d tig);
 
         ~LidarImuGnssFilterEstimatorWorldCentre(){}
 
@@ -88,7 +67,21 @@ namespace Estimator{
          * @details 处理Lidar观测的位姿
          */
         void ProcessSensorData() override;
-      
+    private:
+        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+        /**
+         * @brief 初始化
+         * @param timestamp 初始化的时间戳 
+         */
+        bool estimatorInitialize(double const& timestamp);
+
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        /**
+         * @brief 估计器状态协方差矩阵初始化 
+         * @param states StatesWithImu类型 初始化的状态
+         */
+        void estimatorStatesCovarianceInitialize(StatesWithImu &states);
+
     private:
         // 初始化器
         Initializer initializer_;  
@@ -102,7 +95,6 @@ namespace Estimator{
         PositionCorrection<EstimatedStates, _dim_states> gnss_correction_; 
         // 用于初始化的imu数据 
         std::vector<Sensor::ImuDataConstPtr> prepared_imus_;  
-
         // 外参   
         Eigen::Matrix3d Rlb_;     // body->lidar的旋转   
         Eigen::Vector3d tlb_;     // body->lidar的平移
@@ -110,8 +102,26 @@ namespace Estimator{
         Eigen::Vector3d til_;     // lidar->imu的平移  
         Eigen::Matrix3d Rig_;     // gnss->imu的旋转   
         Eigen::Vector3d tig_;     // gnss->imu的平移 
-          
   };  // class LidarImuGnssFilterEstimatorWorldCentre
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  template<typename EstimatedStates, int _dim_states >
+  LidarImuGnssFilterEstimatorWorldCentre<EstimatedStates, _dim_states>::LidarImuGnssFilterEstimatorWorldCentre( float const& imu_acc_noise, 
+                                                                                                                                                                    float const& imu_gyro_noise, 
+                                                                                                                                                                    float const& imu_acc_bias_noise, 
+                                                                                                                                                                    float const& imu_gyro_bias_noise,
+                                                                                                                                                                    std::shared_ptr<Model::ImuMotionModelInterface> imu_motion_model_ptr,
+                                                                                                                                                                    Eigen::Matrix3d Rlb, 
+                                                                                                                                                                    Eigen::Vector3d tlb, 
+                                                                                                                                                                    Eigen::Matrix3d Ril, 
+                                                                                                                                                                    Eigen::Vector3d til,
+                                                                                                                                                                    Eigen::Matrix3d Rig, 
+                                                                                                                                                                    Eigen::Vector3d tig) : Rlb_(Rlb), tlb_(tlb), Ril_(Ril), til_(til), Rig_(Rig), tig_(tig)
+  {   
+      // imu预测器初始化  
+      imu_predict_ = ImuPredictor(imu_acc_noise, imu_gyro_noise, imu_acc_bias_noise, 
+                                                                  imu_gyro_bias_noise, imu_motion_model_ptr);  
+  }
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   template<typename EstimatedStates, int _dim_states >
@@ -135,24 +145,21 @@ namespace Estimator{
       rotation_active = false;    
       std::cout<<"FilterEstimatorCentreRobot::Initialize ----- no rotation message !" << std::endl;
     }
-
     // 加速度buf
     std::vector<Eigen::Vector3d> acc_buf;  
     // 旋转buf
     std::vector<Eigen::Quaterniond> rot_buf;
     // 陀螺仪buf
     std::vector<Eigen::Vector3d> gyro_buf; 
-
     // 提取数据 
     for(auto const& imu : prepared_imus_)
     {
-      acc_buf.emplace_back(std::move(imu->acc)); 
-      gyro_buf.emplace_back(std::move(imu->gyro)); 
+      acc_buf.push_back(std::move(imu->acc)); 
+      gyro_buf.push_back(std::move(imu->gyro)); 
       if(!rotation_active)   
           continue;
-      rot_buf.emplace_back(std::move(imu->rot));  
+      rot_buf.push_back(std::move(imu->rot));  
     }
-
     // 平滑后的等效IMU   用于初始化 
     ImuDataPtr initialized_imu = std::make_shared<ImuData>(); 
     initialized_imu->timestamp = timestamp;
