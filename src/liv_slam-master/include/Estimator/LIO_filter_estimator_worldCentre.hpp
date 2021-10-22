@@ -1,5 +1,6 @@
 /**
  * @brief Lidar-IMU-GNSS 滤波器状态估计器  
+ * @details 主要用于定位，建图时不使用  
  * @author wh.l
  * @date 2021/4/20
  */
@@ -8,7 +9,7 @@
 #define _LIDARIMUGNSS_FILTER_ESTIMATOR_WORLDCENTRE_HPP_
 
 #include "utility.hpp"
-#include "Estimator/LidarImuGnss_filter_estimator_interface.hpp"
+#include "Estimator/LIO_filter_estimator_interface.hpp"
 #include "Estimator/Predictor/imu_predictor.hpp"
 #include "Estimator/Correction/GNSS/gnss_correction.hpp"
 #include "Estimator/Correction/GNSS/gnss_correction_with_prior_constraint.hpp"
@@ -18,24 +19,24 @@
 namespace Estimator{
 
   /**
-   * @brief 使用滤波器融合IMU-GPS-LIDAR的里程计      
+   * @brief 使用滤波器融合IMU-LIDAR的里程计      
    * @details 估计的方式是以世界坐标系为中心
    *          变化主要有： 1. 滤波器  eskf/ieskf(主要是观测更新的区别，采取多态)    2. 估计的状态变量设置 (可以复用 ，采取模板)
    * @param EstimatedStates 估计器估计的状态
    * @param _dim_states 状态的维度   
    */
   template<typename EstimatedStates, int _dim_states >
-  class LidarImuGnssFilterEstimatorWorldCentre : public LidarImuGnssFilterEstimatorInterFace
+  class LidarImuFilterEstimatorWorldCentre : public LidarImuFilterEstimatorInterFace
   {
     public: 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        LidarImuGnssFilterEstimatorWorldCentre(float const& imu_acc_noise, float const& imu_gyro_noise, 
+        LidarImuFilterEstimatorWorldCentre(float const& imu_acc_noise, float const& imu_gyro_noise, 
                          float const& imu_acc_bias_noise, float const& imu_gyro_bias_noise,
                          std::shared_ptr<Model::ImuMotionModelInterface> imu_motion_model_ptr,
                          Eigen::Matrix3d Rlb, Eigen::Vector3d tlb, Eigen::Matrix3d Ril, Eigen::Vector3d til,
                          Eigen::Matrix3d Rig, Eigen::Vector3d tig);
 
-        ~LidarImuGnssFilterEstimatorWorldCentre(){}
+        ~LidarImuFilterEstimatorWorldCentre(){}
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         Sensor::ImuDataConstPtr const& GetLastImuData() const override
@@ -102,11 +103,11 @@ namespace Estimator{
         Eigen::Vector3d til_;     // lidar->imu的平移  
         Eigen::Matrix3d Rig_;     // gnss->imu的旋转   
         Eigen::Vector3d tig_;     // gnss->imu的平移 
-  };  // class LidarImuGnssFilterEstimatorWorldCentre
+  };  // class LidarImuFilterEstimatorWorldCentre
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   template<typename EstimatedStates, int _dim_states >
-  LidarImuGnssFilterEstimatorWorldCentre<EstimatedStates, _dim_states>::LidarImuGnssFilterEstimatorWorldCentre( float const& imu_acc_noise, 
+  LidarImuFilterEstimatorWorldCentre<EstimatedStates, _dim_states>::LidarImuFilterEstimatorWorldCentre( float const& imu_acc_noise, 
                                                                                                                                                                     float const& imu_gyro_noise, 
                                                                                                                                                                     float const& imu_acc_bias_noise, 
                                                                                                                                                                     float const& imu_gyro_bias_noise,
@@ -125,7 +126,7 @@ namespace Estimator{
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   template<typename EstimatedStates, int _dim_states >
-  bool LidarImuGnssFilterEstimatorWorldCentre<EstimatedStates, _dim_states>::estimatorInitialize(double const& timestamp)
+  bool LidarImuFilterEstimatorWorldCentre<EstimatedStates, _dim_states>::estimatorInitialize(double const& timestamp)
   {  
     // 判断IMU数据是否足够
     if(!initializer_.CheckInitializedImuDateNumber(prepared_imus_))  
@@ -198,7 +199,7 @@ namespace Estimator{
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   template<typename EstimatedStates, int _dim_states >
-  void LidarImuGnssFilterEstimatorWorldCentre<EstimatedStates, _dim_states>::estimatorStatesCovarianceInitialize(StatesWithImu &states)
+  void LidarImuFilterEstimatorWorldCentre<EstimatedStates, _dim_states>::estimatorStatesCovarianceInitialize(StatesWithImu &states)
   {
     states.cov_.setZero();
     // 状态初始协方差设置   
@@ -215,7 +216,7 @@ namespace Estimator{
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   template<typename EstimatedStates, int _dim_states >
-  void LidarImuGnssFilterEstimatorWorldCentre<EstimatedStates, _dim_states>::ProcessSensorData(Sensor::ImuDataConstPtr &imuData) 
+  void LidarImuFilterEstimatorWorldCentre<EstimatedStates, _dim_states>::ProcessSensorData(Sensor::ImuDataConstPtr &imuData) 
   { 
     // 只要gnss与lidar有一个初始化了  那么就进行滤波器的预测环节
     if(gnss_initialize_||lidar_initialize_)
@@ -225,13 +226,13 @@ namespace Estimator{
     }
     else
     { 
-      prepared_imus_.emplace_back(std::move(imuData));       // 缓存数据用于初始化  
+      prepared_imus_.push_back(std::move(imuData));       // 缓存数据用于初始化  
     }
   } 
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   template<typename EstimatedStates, int _dim_states >
-  void LidarImuGnssFilterEstimatorWorldCentre<EstimatedStates, _dim_states>::ProcessSensorData(Sensor::GnssDataConstPtr const& gnssData) 
+  void LidarImuFilterEstimatorWorldCentre<EstimatedStates, _dim_states>::ProcessSensorData(Sensor::GnssDataConstPtr const& gnssData) 
   {
     // 如果gnss没有初始化 
     if(!gnss_initialize_)
@@ -270,7 +271,7 @@ namespace Estimator{
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   template<typename EstimatedStates, int _dim_states >
-  void LidarImuGnssFilterEstimatorWorldCentre<EstimatedStates, _dim_states>::ProcessSensorData() 
+  void LidarImuFilterEstimatorWorldCentre<EstimatedStates, _dim_states>::ProcessSensorData() 
   {
       if(!lidar_initialize_)    // 没初始化那么进行初始化 
       { 

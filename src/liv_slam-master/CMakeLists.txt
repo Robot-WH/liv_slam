@@ -205,7 +205,7 @@ target_link_libraries(MapOptimator_node
 
 add_executable( FilterFusionOdometry
    src/apps/LIO/FilterLIO/FilterFusionOdometry_node.cpp
-   src/lib/ros_bridge/LidarImuGnssFilterFusionOdometry_bridge.cpp
+   src/lib/ros_bridge/FilterFusionLIO_bridge.cpp
 )
 add_dependencies(FilterFusionOdometry ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(FilterFusionOdometry

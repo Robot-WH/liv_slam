@@ -3,7 +3,7 @@
 
 #include "utility.hpp"
 #include "ros_utils.hpp"
-#include "Estimator/LidarImuGnss_filter_estimator_interface.hpp"
+#include "Estimator/LIO_filter_estimator_interface.hpp"
 #include "ros_bridge/FusionOdometry_bridge_interface.h"
 #include "Estimator/initialize.hpp"
 #include "Sensor/sensor.hpp"
@@ -14,17 +14,17 @@ using namespace Estimator;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /**
- * @brief Lidar-IMU-GNSS 滤波器融合的ros入口类 
+ * @brief Lidar-IMU 滤波器融合的ros入口类 
  * @details 负责数据的传送
  */
-class LidarImuGnssFilterFusionOdometryBridge : public FusionOdometryBridgeInterface    
+class FilterFusionLIOBridge : public FusionOdometryBridgeInterface    
 {
     private:
         // 订阅激光里程计模块发送的数据
         ros::Subscriber subLidar;
         // IMU
         ros::Subscriber subImu;
-        // gnss
+        // gnss    提供真值用于比较  
         ros::Subscriber subGnss;
 
         ros::Publisher pubGnssPath;                   // 发布GNSS轨迹
@@ -38,7 +38,7 @@ class LidarImuGnssFilterFusionOdometryBridge : public FusionOdometryBridgeInterf
         Eigen::Vector3d twi = {0, 0, 0};
         // 通过滤波器估计前后两帧间的运动 
         // 核心！！   主要实现采用eskf/ieskf  融合imu,gps,lidar
-        std::unique_ptr<LidarImuGnssFilterEstimatorInterFace> estimator_ptr_;  
+        std::unique_ptr<LidarImuFilterEstimatorInterFace> estimator_ptr_;  
         // 激光里程计对象
         std::unique_ptr<LidarOdometryInterface>  lidar_odometry_ptr_;  
         // 数据缓存队列
@@ -61,9 +61,8 @@ class LidarImuGnssFilterFusionOdometryBridge : public FusionOdometryBridgeInterf
         std::string map_frame_id="map";
     
     public:    
-        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        LidarImuGnssFilterFusionOdometryBridge(std::unique_ptr<LidarImuGnssFilterEstimatorInterFace> &estimator_ptr);
-        ~LidarImuGnssFilterFusionOdometryBridge(){} 
+        FilterFusionLIOBridge(std::unique_ptr<LidarImuFilterEstimatorInterFace> &estimator_ptr);
+        ~FilterFusionLIOBridge(){} 
         // 处理线程 
         void Process() override; 
 

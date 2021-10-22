@@ -1,14 +1,14 @@
 /*********************************************************************************************
  * @brief 基于滤波器的多传感器融合激光里程计
- * @details 3D激光雷达为主  融合IMU，GNSS  
+ * @details 3D激光雷达为主  融合IMU, wheels
  *          坐标系：车体坐标系(轮速计)： b    imu系： i    激光系： l   
  * @author wh.l
  * @date 2020.10.20
  *********************************************************************************************/
-#include "ros_bridge/LidarImuGnssFilterFusionOdometry_bridge.h"
+#include "ros_bridge/FilterFusionLIO_bridge.h"
 #include "ros_bridge/FusionOdometry_bridge_interface.h"
-#include "ros_bridge/FusionOdometry_bridge_factor.hpp"
-#include "Estimator/LidarImuGnss_filter_estimator_robotCentre.hpp"
+#include "ros_bridge/FusionOdometry_bridge_factory.hpp"
+#include "Estimator/LIO_filter_estimator_robotCentre.hpp"
 
 using namespace std;  
 using namespace Sensor; 

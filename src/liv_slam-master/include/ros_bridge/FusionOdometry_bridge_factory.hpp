@@ -6,10 +6,10 @@
 #include "ros_utils.hpp"
 #include "Sensor/sensor.hpp"
 #include "ros_bridge/FusionOdometry_bridge_interface.h"
-#include "ros_bridge/LidarImuGnssFilterFusionOdometry_bridge.h"
-#include "Estimator/LidarImuGnss_filter_estimator_interface.hpp"
-#include "Estimator/LidarImuGnss_filter_estimator_robotCentre.hpp"
-#include "Estimator/LidarImuGnss_filter_estimator_worldCentre.hpp"
+#include "ros_bridge/FilterFusionLIO_bridge.h"
+#include "Estimator/LIO_filter_estimator_interface.hpp"
+#include "Estimator/LIO_filter_estimator_robotCentre.hpp"
+#include "Estimator/LIO_filter_estimator_worldCentre.hpp"
 #include "Model/MotionModel/Imu_MotionModel/imu_motion_model_interface.hpp"
 #include "Model/MotionModel/Imu_MotionModel/imu_midIntegral_model.hpp"
 
@@ -42,9 +42,9 @@ class LidarImuGnssFusionOdometryBridgeFactory : public FusionOdometryBridgeFacto
             // IMU 运动模型       中值积分  
             std::shared_ptr<Model::ImuMotionModelInterface> imu_motion_model_ptr;
             imu_motion_model_ptr = std::make_shared<Model::ImuMidIntegralModel>(); 
-            // 构建 Lidar- IMU - GNSS 估计器 
-            std::unique_ptr<LidarImuGnssFilterEstimatorInterFace> estimator_ptr{
-                new LidarImuGnssFilterEstimatorWorldCentre<StatesWithImu, 15>{
+            // 构建 估计器 
+            std::unique_ptr<LidarImuFilterEstimatorInterFace> estimator_ptr{
+                new LidarImuFilterEstimatorWorldCentre<StatesWithImu, 15>{
                     param_server_.imuAccNoise, param_server_.imuGyroNoise, 
                     param_server_.imuAccBiasN, param_server_.imuGyroBiasN, 
                     imu_motion_model_ptr, param_server_.Rlb, param_server_.tlb, 
@@ -53,7 +53,7 @@ class LidarImuGnssFusionOdometryBridgeFactory : public FusionOdometryBridgeFacto
                 }};  
             // 创建ROS bridge对象   传入  估计器对象 
             std::unique_ptr<FusionOdometryBridgeInterface> fusionOdometry_ptr{
-                new LidarImuGnssFilterFusionOdometryBridge{estimator_ptr}};
+                new FilterFusionLIOBridge{estimator_ptr}};
             return fusionOdometry_ptr;  
         }
 };

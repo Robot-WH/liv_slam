@@ -1,9 +1,9 @@
     
-    #include "ros_bridge/LidarImuGnssFilterFusionOdometry_bridge.h"
+    #include "ros_bridge/FilterFusionLIO_bridge.h"
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    LidarImuGnssFilterFusionOdometryBridge::LidarImuGnssFilterFusionOdometryBridge(
-        std::unique_ptr<LidarImuGnssFilterEstimatorInterFace> &estimator_ptr) : estimator_ptr_(std::move(estimator_ptr))
+    FilterFusionLIOBridge::FilterFusionLIOBridge(
+        std::unique_ptr<LidarImuFilterEstimatorInterFace> &estimator_ptr) : estimator_ptr_(std::move(estimator_ptr))
     {   
         private_nh_ = ros::NodeHandle("~");
         string lidar_topic,imu_topic, gps_topic;
@@ -12,15 +12,15 @@
         gps_topic = private_nh_.param<std::string>("GnssTopic", "/");
 
         subLidar = private_nh_.subscribe(lidar_topic, 1000, 
-                                                            &LidarImuGnssFilterFusionOdometryBridge::lidarPointCloudHandler, 
+                                                            &FilterFusionLIOBridge::lidarPointCloudHandler, 
                                                             this, ros::TransportHints().tcpNoDelay());
 
         subImu = private_nh_.subscribe(imu_topic, 1000, 
-                                                        &LidarImuGnssFilterFusionOdometryBridge::imuHandler, this, 
+                                                        &FilterFusionLIOBridge::imuHandler, this, 
                                                         ros::TransportHints().tcpNoDelay());
 
         subGnss = private_nh_.subscribe(gps_topic, 1000, 
-                                                        &LidarImuGnssFilterFusionOdometryBridge::gnssHandler, 
+                                                        &FilterFusionLIOBridge::gnssHandler, 
                                                         this, ros::TransportHints().tcpNoDelay());  
 
         pubGnssPath = private_nh_.advertise<nav_msgs::Path>("/Gnsspath", 100);
@@ -30,7 +30,6 @@
         cout << " lidar odometry topic: " << lidar_topic << " ,imu topic: " 
                 << imu_topic << " ,gnss topic: " << gps_topic << std::endl;     
     
-        
         // 读取 是否需要使用IMU    使用IMU即为
         private_nh_.param<bool>("IMUFusionSwitch", IMU_fusion_switch, true);
         private_nh_.param<bool>("IMUPathSwitch", IMU_path_switch, true);
@@ -43,12 +42,12 @@
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void LidarImuGnssFilterFusionOdometryBridge::allocateMemory()
+    void FilterFusionLIOBridge::allocateMemory()
     {  
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void LidarImuGnssFilterFusionOdometryBridge::predict(const sensor_msgs::ImuConstPtr &imu_msg)
+    void FilterFusionLIOBridge::predict(const sensor_msgs::ImuConstPtr &imu_msg)
     {
         // double t = imu_msg->header.stamp.toSec();
         // if (init_imu)
@@ -87,7 +86,7 @@
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void LidarImuGnssFilterFusionOdometryBridge::update()
+    void FilterFusionLIOBridge::update()
     {
         // TicToc t_predict;
         // latest_time = current_time;
@@ -106,7 +105,7 @@
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void LidarImuGnssFilterFusionOdometryBridge::imuHandler(const sensor_msgs::ImuConstPtr &imu_msg)
+    void FilterFusionLIOBridge::imuHandler( sensor_msgs::ImuConstPtr const& imu_msg)
     {
         // 保证队列中 数据的顺序正确 
         static double last_imu_t = -1; 
@@ -118,7 +117,6 @@
         }
 
         last_imu_t = imu_msg->header.stamp.toSec();
-
         // 解析IMU数据 
         Sensor::ImuDataPtr imu_data_ptr = std::make_shared<Sensor::ImuData>();
         // 保存时间戳 
@@ -156,7 +154,7 @@
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void LidarImuGnssFilterFusionOdometryBridge::lidarPointCloudHandler(sensor_msgs::PointCloud2ConstPtr const& lidar_msg)
+    void FilterFusionLIOBridge::lidarPointCloudHandler(sensor_msgs::PointCloud2ConstPtr const& lidar_msg)
     {
         // 保证队列中 数据的顺序正确 
         static double last_lidar_t = -1; 
@@ -166,10 +164,8 @@
             ROS_WARN("lidar message in disorder!");
             return;
         }
-
         // 保存时间戳 
         last_lidar_t = lidar_msg->header.stamp.toSec();
-
         Sensor::LidarDataPtr lidar_data_ptr = std::make_shared<Sensor::LidarData>();
         // 保存时间戳 
         lidar_data_ptr->timestamp = lidar_msg->header.stamp.toSec();
@@ -185,7 +181,7 @@
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void LidarImuGnssFilterFusionOdometryBridge::gnssHandler(sensor_msgs::NavSatFixConstPtr const& navsat_msg)
+    void FilterFusionLIOBridge::gnssHandler(sensor_msgs::NavSatFixConstPtr const& navsat_msg)
     {
         // 保证队列中 数据的顺序正确 
         static double last_gnss_t = -1; 
@@ -197,7 +193,6 @@
         }
 
         last_gnss_t = navsat_msg->header.stamp.toSec();
-
         // 解析Gnss数据 
         Sensor::GnssDataPtr gnss_data_ptr = std::make_shared<Sensor::GnssData>();
         // 保存时间戳 
@@ -215,7 +210,7 @@
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // thread: Lidar-inertial odometry
-    void LidarImuGnssFilterFusionOdometryBridge::Process()
+    void FilterFusionLIOBridge::Process()
     {
         while (true)
         {   
@@ -224,7 +219,6 @@
             {
                 uint8_t sensor_id = 0;
                 double earliest_time = numeric_limits<double>::max();  
-                
                 // 找到最早的数据  
                 if(!imu_buf.empty())
                 {   
@@ -262,7 +256,6 @@
                         {
                             break;
                         }
-
                         // 取出头数据 
                         Sensor::LidarDataConstPtr lidar_ptr = lidar_buf.front();  
                         lidar_buf.pop();  
@@ -287,7 +280,6 @@
                                 // 如果IMU没有    那么可以采用匀速运动学模型进行预测   
                             }
                         }
-
                         // 进行校正
                     
                     }

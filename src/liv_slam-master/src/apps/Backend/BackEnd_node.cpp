@@ -349,7 +349,6 @@ class SlidingWindowBackEnd
     Eigen::Quaterniond MAP2ENU2 = {0,0,0,0};       // Map到ENU系的旋转
     Eigen::Matrix4d Tme = Eigen::Matrix4d::Identity();
     Eigen::Matrix4d Til;
-
     ros::Time Optimize_previous_time = ros::Time(0);
     ros::Time Map_updata_previous_time = ros::Time(0);
 }; // class SlidingWindowBackEnd
@@ -359,7 +358,6 @@ visualization_msgs::MarkerArray SlidingWindowBackEnd::createMarkerArray(const ro
 {
   visualization_msgs::MarkerArray markers;
   markers.markers.resize(4);
-
   // node markers    位姿节点
   visualization_msgs::Marker& traj_marker = markers.markers[0];
   traj_marker.header.frame_id = "map";
@@ -367,10 +365,8 @@ visualization_msgs::MarkerArray SlidingWindowBackEnd::createMarkerArray(const ro
   traj_marker.ns = "nodes";
   traj_marker.id = 0;
   traj_marker.type = visualization_msgs::Marker::SPHERE_LIST;
-
   traj_marker.pose.orientation.w = 1.0;
   traj_marker.scale.x = traj_marker.scale.y = traj_marker.scale.z = 0.5;
-  
   // 数量
   traj_marker.points.resize(keyframes.size()+sliding_windows.size()+new_keyframe_queue.size());
   // 颜色
@@ -404,7 +400,6 @@ visualization_msgs::MarkerArray SlidingWindowBackEnd::createMarkerArray(const ro
     traj_marker.colors[new_keyframe_queue.size()+i].b = 0.0;
     traj_marker.colors[new_keyframe_queue.size()+i].a = 1.0;
   }  
-
   // 优化后位姿节点 
   for(int i=0; i<keyframes.size(); i++) 
   {
@@ -419,7 +414,6 @@ visualization_msgs::MarkerArray SlidingWindowBackEnd::createMarkerArray(const ro
     traj_marker.colors[new_keyframe_queue.size()+sliding_windows.size()+i].b = 1.0;
     traj_marker.colors[new_keyframe_queue.size()+sliding_windows.size()+i].a = 1.0;
   }   
-  
   // edge markers  边
   visualization_msgs::Marker& edge_marker = markers.markers[2];
   edge_marker.header.frame_id = "map";
@@ -427,14 +421,13 @@ visualization_msgs::MarkerArray SlidingWindowBackEnd::createMarkerArray(const ro
   edge_marker.ns = "edges";
   edge_marker.id = 2;
   edge_marker.type = visualization_msgs::Marker::LINE_LIST;
-
   edge_marker.pose.orientation.w = 1.0;
   edge_marker.scale.x = 0.1;
   // 这里要注意 ！！！！！！！！！！！！！！！！！
   edge_marker.points.resize(keyframes.size() * 2 * 2 * 2 + sliding_windows.size() * 2 * 2 * 2 + Loops.size() * 2);
   edge_marker.colors.resize(keyframes.size() * 2 * 2 * 2 + sliding_windows.size() * 2 * 2 * 2 + Loops.size() * 2);
-
   int i=0;
+
   for(int num = 0; num<keyframes.size(); num++) 
   {
     // 里程计边    Pc
@@ -478,11 +471,11 @@ visualization_msgs::MarkerArray SlidingWindowBackEnd::createMarkerArray(const ro
         i++;
       }
     }
-
     // 地面约束边  
     if(enable_planeConstraint_optimize)
     {
-      if(keyframes[num]->planeConstraint_Valid) {
+      if(keyframes[num]->planeConstraint_Valid) 
+      {
        Eigen::Vector3d plane = {pt1[0], pt1[1], 0};
 
        edge_marker.points[i*2].x = pt1.x();
@@ -544,7 +537,6 @@ visualization_msgs::MarkerArray SlidingWindowBackEnd::createMarkerArray(const ro
         i++;
       }
     }
-
     // 地面约束边  
     if(enable_planeConstraint_optimize)
     {
